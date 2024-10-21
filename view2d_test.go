@@ -138,6 +138,16 @@ func TestTriangle(t *testing.T) {
 }
 
 func TestVerification(t *testing.T) {
+	{
+		old := Amount
+		size := int64(100000)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
 	var (
 		p0  = gog.Point{0.00, 0.00}
 		p1  = gog.Point{0.35, 0.00}
@@ -179,4 +189,9 @@ func TestVerification(t *testing.T) {
 	)
 	vf := OneCurve(A5, cs)
 	t.Logf("view factors: %.5f", vf)
+	total := 0.0
+	for i := range vf {
+		total += vf[i]
+	}
+	t.Logf("total: %.5f", total)
 }
