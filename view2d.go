@@ -23,13 +23,8 @@ func (r *Ray) Rotate(randomValue float64) {
 	if randomValue < 0 || 1 < randomValue {
 		panic(fmt.Errorf("not valid random value: %.5f", randomValue))
 	}
-	// rotate at random angle from -90 ... +90 degree
-	// 	angle := math.Asin(2*math.Sqrt(randomValue) - 1) // 0 ... pi rad.
-	// 	angle = angle * 180 / math.Pi                    // 0 ... 90
-	// 	if 0.5 < rand.Float64() {                        // random negative
-	// 		angle = -angle // -90...90
-	// 	}
-	angle := randomValue*math.Pi - math.Pi/2.0 // -pi/2 ... +pi/2
+	// rotate at random angle from -pi/2 ... +pi/2
+	angle := math.Asin(1 - 2*randomValue)
 	r.finish = gog.Rotate(r.start.X, r.start.Y, angle, r.finish)
 }
 
@@ -53,7 +48,8 @@ func (l Line) GetVector(rand float64) (r Ray) {
 	r.finish.X = r.start.X + (l.p2.X - l.p1.X)
 	r.finish.Y = r.start.Y + (l.p2.Y - l.p1.Y)
 	// rotate at 90 degree
-	res := gog.Rotate(r.start.X, r.start.Y, math.Pi/2.0, r.finish)
+	xc, yc := r.start.X, r.start.Y
+	res := gog.Rotate(xc, yc, math.Pi/2.0, r.finish)
 	r.finish = res
 	// avoid scaling to lenght of vector to 1.0 and it is ok
 	return
@@ -74,7 +70,7 @@ func Calc(curves []Curve) {
 	return
 }
 
-var Amount int64 = 100
+var Amount int64 = 100000
 
 var (
 	debug    bool
@@ -102,7 +98,7 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		scale = math.Sqrt(pow.E2(begin.X-finish.X) + pow.E2(begin.Y-finish.Y))
 		// for garantee large of all point system, them multiply
 		// by coefficient more 1.0
-		scale *= 2
+		scale *= 2.1
 	}
 	for iter := int64(0); iter <= Amount; iter++ {
 		v := present.GetVector(rand.Float64())
@@ -121,23 +117,25 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 				// TODO : if gog.Orientation(c.p1, c.p2, v.start) != gog.ClockwisePoints {
 				// TODO : 	continue
 				// TODO : }
-				pi, _, _ := gog.LineLine(
+				pi, stA, stB := gog.LineLine(
 					v.start, v.finish,
 					c.p1, c.p2,
 				)
+				_ = stA
+				_ = stB
 				if len(pi) == 0 {
 					if debug {
 						miss = append(miss, Line{v.start, v.finish})
 					}
 					continue
 				}
-				if debug {
-					intersec = append(intersec, Line{v.start, v.finish})
-				}
 				d := gog.Distance(v.start, pi[0])
 				if 1e-6 < math.Abs(d) && d < distance {
 					index = i
 					distance = d
+					if debug {
+						intersec = append(intersec, Line{v.start, pi[0]})
+					}
 				}
 			default:
 				panic(fmt.Errorf("not implemented: %#v", v))

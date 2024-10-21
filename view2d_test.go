@@ -7,6 +7,10 @@ import (
 
 	"github.com/Konstantin8105/efmt"
 	"github.com/Konstantin8105/gog"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 )
 
 func a(angle float64) (F12, f float64) {
@@ -29,10 +33,25 @@ func a(angle float64) (F12, f float64) {
 	return
 }
 
+type arr struct {
+	l Line
+}
+
+func (a arr) Len() int { return 2 }
+func (a arr) XY(i int) (x, y float64) {
+	if i == 0 {
+		return a.l.p1.X, a.l.p1.Y
+	}
+	return a.l.p2.X, a.l.p2.Y
+}
+
 func TestRecorder(t *testing.T) {
 	{
 		old := Amount
-		Amount = 100
+		size := int64(80)
+		if size < Amount {
+			Amount = size
+		}
 		defer func() {
 			Amount = old
 		}()
@@ -44,13 +63,43 @@ func TestRecorder(t *testing.T) {
 			debug = old
 		}()
 	}
-	F12, f := a(60)
-	fmt.Println(miss)
-	fmt.Println(intersec)
+	F12, f := a(90)
+	fmt.Printf("miss:     %.3f\n", miss)
+	fmt.Printf("intersec: %.3f\n", intersec)
 	fmt.Println("result", efmt.Sprint(F12), efmt.Sprint(f))
+
+	for _, gr := range []struct {
+		name string
+		data []Line
+	}{
+		{"miss", miss},
+		{"intersec", intersec},
+	} {
+		p := plot.New()
+
+		p.Title.Text = "View factor"
+		p.X.Label.Text = "X"
+		p.Y.Label.Text = "Y"
+
+		var v []interface{}
+		v = append(v, gr.name)
+		for i := range gr.data {
+			a := arr{l: gr.data[i]}
+			v = append(v, a)
+		}
+		err := plotutil.AddLinePoints(p, v...)
+		if err != nil {
+			panic(err)
+		}
+		// Save the plot to a PNG file.
+		if err := p.Save(4*vg.Inch, 4*vg.Inch, gr.name+".png"); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func TestL(t *testing.T) {
+	// angle := 90.0
 	for angle := 5.0; angle < 180; angle += 5 {
 		F12, f := a(angle)
 		fmt.Println(efmt.Sprint(angle), efmt.Sprint(F12), efmt.Sprint(f))
