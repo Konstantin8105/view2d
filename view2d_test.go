@@ -136,3 +136,47 @@ func TestTriangle(t *testing.T) {
 		}
 	}
 }
+
+func TestVerification(t *testing.T) {
+	var (
+		p0  = gog.Point{0.00, 0.00}
+		p1  = gog.Point{0.35, 0.00}
+		A12 = Line{p0, p1}
+
+		p2  = gog.Point{0.8, 0.00}
+		A11 = Line{p1, p2}
+
+		p3  = gog.Point{1.00, 0.00}
+		A10 = Line{p2, p3}
+
+		p4 = gog.Point{1, 0.5}
+		A9 = Line{p3, p4}
+
+		p5 = gog.Point{0.6, 0.5}
+		A8 = Line{p4, p5}
+
+		p6 = gog.Point{1., 0.5001}
+		A7 = Line{p5, p6}
+
+		p7 = gog.Point{1, 1}
+		A6 = Line{p6, p7}
+
+		p8 = gog.Point{0, 1}
+		A5 = Line{p7, p8}
+
+		p9 = gog.Point{0, 0.5001}
+		A4 = Line{p8, p9}
+
+		p10 = gog.Point{0.4, 0.5}
+		A2  = Line{p9, p10}
+
+		p11 = gog.Point{0, 0.5}
+		A3  = Line{p10, p11}
+
+		A1 = Line{p11, p0}
+
+		cs = []Curve{A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12}
+	)
+	vf := OneCurve(A5, cs)
+	t.Logf("view factors: %.5f", vf)
+}
