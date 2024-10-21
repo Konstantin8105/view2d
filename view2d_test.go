@@ -107,7 +107,7 @@ func TestL(t *testing.T) {
 	}
 	for angle := 5.0; angle < 100; angle += 5 {
 		F12, f := a(angle)
-		if diff := math.Abs((F12 - f) / F12); 1e-2 < diff {
+		if diff := math.Abs((F12 - f) / F12); 1.0/100.0 < diff { // 1%
 			t.Errorf("angle = %.2f diff = %.5f", angle, diff)
 		}
 		t.Logf("%s %s %s", efmt.Sprint(angle), efmt.Sprint(F12), efmt.Sprint(f))
