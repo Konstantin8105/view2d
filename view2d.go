@@ -9,24 +9,32 @@ import (
 	"github.com/Konstantin8105/pow"
 )
 
-type Vector struct {
+type Ray struct {
 	start, finish gog.Point
 }
 
-func (v *Vector) Scale(scale float64) {
-	v.finish.X = v.start.X + (v.finish.X-v.start.X)*scale
-	v.finish.Y = v.start.Y + (v.finish.Y-v.start.Y)*scale
+func (r *Ray) Scale(scale float64) {
+	r.finish.X = r.start.X + (r.finish.X-r.start.X)*scale
+	r.finish.Y = r.start.Y + (r.finish.Y-r.start.Y)*scale
 }
 
-func (v *Vector) Rotate(rand float64) {
-	if rand < 0 || 1 < rand {
-		panic(fmt.Errorf("not valid random value: %.5f", rand))
+// rand value from 0...1
+func (r *Ray) Rotate(randomValue float64) {
+	if randomValue < 0 || 1 < randomValue {
+		panic(fmt.Errorf("not valid random value: %.5f", randomValue))
 	}
-	// TODO rotate at random angle from -90 ... +90 degree
+	// rotate at random angle from -90 ... +90 degree
+	// 	angle := math.Asin(2*math.Sqrt(randomValue) - 1) // 0 ... pi rad.
+	// 	angle = angle * 180 / math.Pi                    // 0 ... 90
+	// 	if 0.5 < rand.Float64() {                        // random negative
+	// 		angle = -angle // -90...90
+	// 	}
+	angle := randomValue*math.Pi - math.Pi/2.0 // -pi/2 ... +pi/2
+	r.finish = gog.Rotate(r.start.X, r.start.Y, angle, r.finish)
 }
 
 type Curve interface {
-	GetVector(rand float64) (v Vector)
+	GetVector(rand float64) (r Ray)
 	Box() (begin, finish gog.Point)
 }
 
@@ -36,14 +44,18 @@ type Line struct {
 	p1, p2 gog.Point
 }
 
-func (l Line) GetVector(rand float64) (v Vector) {
+func (l Line) GetVector(rand float64) (r Ray) {
 	if rand < 0 || 1 < rand {
 		panic(fmt.Errorf("not valid random value: %.5f", rand))
 	}
-	v.start.X = l.p1.X + (l.p2.X-l.p1.X)*rand
-	v.start.Y = l.p1.Y + (l.p2.Y-l.p1.Y)*rand
-
-	// TODO v.finish perpendicular vector 1 size
+	r.start.X = l.p1.X + (l.p2.X-l.p1.X)*rand
+	r.start.Y = l.p1.Y + (l.p2.Y-l.p1.Y)*rand
+	r.finish.X = r.start.X + (l.p2.X - l.p1.X)
+	r.finish.Y = r.start.Y + (l.p2.Y - l.p1.Y)
+	// rotate at 90 degree
+	res := gog.Rotate(r.start.X, r.start.Y, math.Pi/2.0, r.finish)
+	r.finish = res
+	// avoid scaling to lenght of vector to 1.0 and it is ok
 	return
 }
 
@@ -64,7 +76,17 @@ func Calc(curves []Curve) {
 
 var Amount int64 = 100
 
+var (
+	debug    bool
+	intersec []Line
+	miss     []Line
+)
+
 func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
+	if debug {
+		intersec = []Line{}
+		miss = []Line{}
+	}
 	vf := make([]int64, len(curves))
 	// calculate scale of geometry
 	scale := 0.0
@@ -78,6 +100,9 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 			finish.Y = max(finish.Y, b.Y, f.Y)
 		}
 		scale = math.Sqrt(pow.E2(begin.X-finish.X) + pow.E2(begin.Y-finish.Y))
+		// for garantee large of all point system, them multiply
+		// by coefficient more 1.0
+		scale *= 2
 	}
 	for iter := int64(0); iter <= Amount; iter++ {
 		v := present.GetVector(rand.Float64())
@@ -85,13 +110,48 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		v.Scale(scale)
 		// rotate vector
 		v.Rotate(rand.Float64())
-		// TODO find intersection between vector and curves
-
-		// TODO get first intersection
+		// find intersection between vector and curves
+		// present curve to all
+		// and store minimal distance
+		index := -1
+		distance := math.MaxFloat64
+		for i := range curves {
+			switch c := curves[i].(type) {
+			case Line:
+				// TODO : if gog.Orientation(c.p1, c.p2, v.start) != gog.ClockwisePoints {
+				// TODO : 	continue
+				// TODO : }
+				pi, _, _ := gog.LineLine(
+					v.start, v.finish,
+					c.p1, c.p2,
+				)
+				if len(pi) == 0 {
+					if debug {
+						miss = append(miss, Line{v.start, v.finish})
+					}
+					continue
+				}
+				if debug {
+					intersec = append(intersec, Line{v.start, v.finish})
+				}
+				d := gog.Distance(v.start, pi[0])
+				if 1e-6 < math.Abs(d) && d < distance {
+					index = i
+					distance = d
+				}
+			default:
+				panic(fmt.Errorf("not implemented: %#v", v))
+			}
+		}
+		// get first intersection
+		if 0 <= index {
+			vf[index]++
+		}
 
 		// TODO add to intersection view factor
 	}
-	for i := range viewFactor {
+	viewFactor = make([]float64, len(curves))
+	for i := range curves {
 		viewFactor[i] = float64(vf[i]) / float64(Amount)
 	}
 	return
