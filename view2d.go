@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"runtime"
+	"sync"
 
 	"github.com/Konstantin8105/gog"
 	"github.com/Konstantin8105/pow"
@@ -93,52 +95,90 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		// by coefficient more 1.0
 		scale *= 2.1
 	}
-	for iter := int64(0); iter <= Amount; iter++ {
-		v := present.GetVector(rand.Float64())
-		// scale vector
-		v.Scale(scale)
-		// rotate vector
-		v.Rotate(rand.Float64())
-		// find intersection between vector and curves
-		// present curve to all
-		// and store minimal distance
-		index := -1
-		distance := math.MaxFloat64
-		for i := range curves {
-			switch c := curves[i].(type) {
-			case Line:
-				// TODO : if gog.Orientation(c.p1, c.p2, v.start) != gog.ClockwisePoints {
-				// TODO : 	continue
-				// TODO : }
-				pi, stA, stB := gog.LineLine(
-					v.start, v.finish,
-					c.p1, c.p2,
-				)
-				_ = stA
-				_ = stB
-				if len(pi) == 0 {
-					if debug {
-						miss = append(miss, Line{v.start, v.finish})
+	// calculation
+	var mut sync.Mutex
+	counter := int64(0)
+	run := func(steps int64) {
+		for iter := int64(0); iter < steps; iter++ {
+			v := present.GetVector(rand.Float64())
+			// scale vector
+			v.Scale(scale)
+			// rotate vector
+			v.Rotate(rand.Float64())
+			// find intersection between vector and curves
+			// present curve to all
+			// and store minimal distance
+			index := -1
+			distance := math.MaxFloat64
+			for i := range curves {
+				switch c := curves[i].(type) {
+				case Line:
+					// TODO : if gog.Orientation(c.p1, c.p2, v.start) != gog.ClockwisePoints {
+					// TODO : 	continue
+					// TODO : }
+					pi, stA, stB := gog.LineLine(
+						v.start, v.finish,
+						c.p1, c.p2,
+					)
+					_ = stA
+					_ = stB
+					if len(pi) == 0 {
+						if debug {
+							miss = append(miss, Line{v.start, v.finish})
+						}
+						continue
 					}
-					continue
-				}
-				d := gog.Distance(v.start, pi[0])
-				if 1e-6 < math.Abs(d) && d < distance {
-					index = i
-					distance = d
-					if debug {
-						intersec = append(intersec, Line{v.start, pi[0]})
+					d := gog.Distance(v.start, pi[0])
+					if 1e-6 < math.Abs(d) && d < distance {
+						index = i
+						distance = d
+						if debug {
+							intersec = append(intersec, Line{v.start, pi[0]})
+						}
 					}
+				default:
+					panic(fmt.Errorf("not implemented: %#v", v))
 				}
-			default:
-				panic(fmt.Errorf("not implemented: %#v", v))
 			}
-		}
-		// get first intersection
-		if 0 <= index {
-			vf[index]++
+			// get first intersection
+			mut.Lock()
+			counter++
+			if 0 <= index {
+				vf[index]++
+			}
+			mut.Unlock()
 		}
 	}
+
+	// parallel calculation
+	cpus := runtime.NumCPU()
+	if int64(cpus)*10 < Amount {
+		var wg sync.WaitGroup
+		wg.Add(cpus)
+		amount := Amount
+		dstep := Amount / int64(cpus)
+		for i := 0; i < cpus; i++ {
+			if i != cpus-1 {
+				amount -= dstep
+				go func() {
+					run(dstep)
+					wg.Done()
+				}()
+			} else {
+				go func() {
+					run(amount)
+					wg.Done()
+				}()
+			}
+		}
+		wg.Wait()
+	} else {
+		run(Amount)
+	}
+	if counter != Amount {
+		panic("not valid amount counter")
+	}
+
 	viewFactor = make([]float64, len(curves))
 	for i := range curves {
 		viewFactor[i] = float64(vf[i]) / float64(Amount)
