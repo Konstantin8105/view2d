@@ -63,13 +63,6 @@ func (l Line) Box() (begin, finish gog.Point) {
 	return
 }
 
-func Calc(curves []Curve) {
-	for i := range curves {
-		fmt.Println(OneCurve(curves[i], curves))
-	}
-	return
-}
-
 var Amount int64 = 100000
 
 var (
@@ -145,8 +138,6 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		if 0 <= index {
 			vf[index]++
 		}
-
-		// TODO add to intersection view factor
 	}
 	viewFactor = make([]float64, len(curves))
 	for i := range curves {

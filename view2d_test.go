@@ -1,7 +1,6 @@
 package view2d
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -63,10 +62,7 @@ func TestRecorder(t *testing.T) {
 			debug = old
 		}()
 	}
-	F12, f := a(90)
-	fmt.Printf("miss:     %.3f\n", miss)
-	fmt.Printf("intersec: %.3f\n", intersec)
-	fmt.Println("result", efmt.Sprint(F12), efmt.Sprint(f))
+	a(90) // action
 
 	for _, gr := range []struct {
 		name string
@@ -99,12 +95,23 @@ func TestRecorder(t *testing.T) {
 }
 
 func TestL(t *testing.T) {
-	// angle := 90.0
-	for angle := 5.0; angle < 180; angle += 5 {
-		F12, f := a(angle)
-		fmt.Println(efmt.Sprint(angle), efmt.Sprint(F12), efmt.Sprint(f))
+	{
+		old := Amount
+		size := int64(100000)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
 	}
-	// TODO verification tests
+	for angle := 5.0; angle < 100; angle += 5 {
+		F12, f := a(angle)
+		if diff := math.Abs((F12 - f) / F12); 1e-2 < diff {
+			t.Errorf("angle = %.2f diff = %.5f", angle, diff)
+		}
+		t.Logf("%s %s %s", efmt.Sprint(angle), efmt.Sprint(F12), efmt.Sprint(f))
+	}
 }
 
 func TestTriangle(t *testing.T) {
@@ -116,9 +123,16 @@ func TestTriangle(t *testing.T) {
 		l0 = Line{p0, p1}
 		l1 = Line{p1, p2}
 		l2 = Line{p2, p0}
-		// 		l0 = Line{p1, p0}
-		// 		l1 = Line{p2, p1}
-		// 		l2 = Line{p0, p2}
+		cs = []Curve{l0, l1, l2}
 	)
-	Calc([]Curve{l0, l1, l2})
+	for i, l := range []Line{l0, l1, l2} {
+		vf := OneCurve(l, cs)
+		total := 0.0
+		for i := range vf {
+			total += vf[i]
+		}
+		if diff := math.Abs((total - 1) / 1.0); 1e-2 < diff {
+			t.Errorf("i = %d diff = %.5f", i, diff)
+		}
+	}
 }
