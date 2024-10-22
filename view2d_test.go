@@ -369,6 +369,7 @@ func TestSingleRow(t *testing.T) {
 		)
 		{
 			// compare Fij
+			// Это view factor - сколько оседает на трубах
 			actFij := vf[0] + vf[1] // view factor on tube
 			if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
 				t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
