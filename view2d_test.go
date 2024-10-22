@@ -6,6 +6,7 @@ import (
 
 	"github.com/Konstantin8105/efmt"
 	"github.com/Konstantin8105/gog"
+	"github.com/Konstantin8105/pow"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotutil"
@@ -90,6 +91,7 @@ func TestRecorder(t *testing.T) {
 		old := debug
 		debug = true
 		defer func() {
+			record() // store data
 			debug = old
 		}()
 	}
@@ -261,13 +263,6 @@ func TestConcentricCylinder(t *testing.T) {
 			Amount = old
 		}()
 	}
-	{
-		old := debug
-		debug = true
-		defer func() {
-			debug = old
-		}()
-	}
 	var (
 		r1 = 1.0
 		r2 = 3.0
@@ -305,7 +300,7 @@ func TestConcentricCylinder(t *testing.T) {
 	{
 		// compare F12
 		actF11 := vfs[0][0]
-		if diff := math.Abs((actF11 - F11) ); 1e-2 < diff {
+		if diff := math.Abs((actF11 - F11)); 1e-2 < diff {
 			t.Errorf("F11: {%.5f, %.5f} diff = %.5f", actF11, F11, diff)
 		}
 	}
@@ -328,6 +323,69 @@ func TestConcentricCylinder(t *testing.T) {
 		actF22 := vfs[1][1]
 		if diff := math.Abs((actF22 - F22) / F22); 1e-2 < diff {
 			t.Errorf("F22: {%.5f, %.5f} diff = %.5f", actF22, F22, diff)
+		}
+	}
+}
+
+func TestSingleRow(t *testing.T) {
+	{
+		old := Amount
+		size := int64(100000)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
+	for S := 2.5; S <= 5.1; S += 0.5 {
+		var (
+			D = 1.0
+			S = 3.0
+		)
+		var (
+			Ydist = 3 * D
+			a     = math.Acos(D / S)
+			b     = math.Pi/2 - a
+			c     = math.Pi/2 - b
+			H     = S / 2.0 / math.Atan(c)
+			Xdist = (H + Ydist) * math.Tan(c)
+		)
+		var (
+			c1 = Circle{
+				Radius:        D / 2.0,
+				VectorOutside: true,
+			}
+
+			p1 = gog.Point{X: -Xdist, Y: -Ydist}
+			p2 = gog.Point{X: +Xdist, Y: -Ydist}
+			l  = Line{p1, p2}
+
+			c2 = Circle{Center: gog.Point{+1 * S, 0}, Radius: D / 2.0, VectorOutside: true}
+
+			p3 = gog.Point{X: S, Y: D/2 + 0.00001}
+			p4 = gog.Point{X: 0, Y: D/2 + 0.00001}
+			l2 = Line{p3, p4}
+
+			cs = []Curve{l, c2, c1, l2}
+		)
+		vf := OneCurve(l2, cs)
+		t.Logf("view factors: %.5f", vf)
+		total := 0.0
+		for i := range vf {
+			total += vf[i]
+		}
+		t.Logf("total: %.5f", total)
+		// expect
+		var (
+			Fij = 1.0 - math.Sqrt(1-pow.E2(D/S)) + (D/S)*math.Atan(math.Sqrt(pow.E2(S/D)-1.0))
+		)
+		{
+			// compare Fij
+			actFij := 1 - vf[0] // Это то что
+			if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
+				t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
+			}
 		}
 	}
 }
