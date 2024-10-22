@@ -44,26 +44,7 @@ func (a arr) XY(i int) (x, y float64) {
 	return a.l.p2.X, a.l.p2.Y
 }
 
-func TestRecorder(t *testing.T) {
-	{
-		old := Amount
-		size := int64(80)
-		if size < Amount {
-			Amount = size
-		}
-		defer func() {
-			Amount = old
-		}()
-	}
-	{
-		old := debug
-		debug = true
-		defer func() {
-			debug = old
-		}()
-	}
-	a(90) // action
-
+func record() {
 	for _, gr := range []struct {
 		name string
 		data []Line
@@ -94,7 +75,29 @@ func TestRecorder(t *testing.T) {
 	}
 }
 
-func TestL(t *testing.T) {
+func TestRecorder(t *testing.T) {
+	{
+		old := Amount
+		size := int64(80)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
+	{
+		old := debug
+		debug = true
+		defer func() {
+			debug = old
+		}()
+	}
+	a(90) // action
+	record()
+}
+
+func TestLine(t *testing.T) {
 	{
 		old := Amount
 		size := int64(100000)
@@ -194,4 +197,111 @@ func TestVerification(t *testing.T) {
 		total += vf[i]
 	}
 	t.Logf("total: %.5f", total)
+}
+
+func TestConcentricCylinders(t *testing.T) {
+	{
+		old := Amount
+		size := int64(100000)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
+	{
+		old := debug
+		debug = true
+		defer func() {
+			debug = old
+		}()
+	}
+	{ // TODO remove
+		old := Amount
+		size := int64(80)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
+	var (
+		r1 = 1.0
+		r2 = 2.0
+	)
+	var (
+		p10 = gog.Point{+r1, 0.0}
+		p11 = gog.Point{0.0, +r1}
+		p12 = gog.Point{-r1, 0.0}
+		a11 = Arc{p10, p11, p12}
+
+		p13 = gog.Point{-r1, 0.0}
+		p14 = gog.Point{0.0, -r1}
+		p15 = gog.Point{+r1, 0.0}
+		a12 = Arc{p13, p14, p15}
+
+		p20 = gog.Point{-r2, 0.0}
+		p21 = gog.Point{0.0, +r2}
+		p22 = gog.Point{+r2, 0.0}
+		a21 = Arc{p20, p21, p22}
+
+		p23 = gog.Point{+r2, 0.0}
+		p24 = gog.Point{0.0, -r2}
+		p25 = gog.Point{-r2, 0.0}
+		a22 = Arc{p23, p24, p25}
+
+		cs = []Curve{a11, a12, a21, a22}
+	)
+	var vfs [][]float64
+	for i := range cs {
+		vf := OneCurve(cs[i], cs)
+		vfs = append(vfs, vf)
+		t.Logf("view factors: %.5f", vf)
+		total := 0.0
+		for i := range vf {
+			total += vf[i]
+		}
+		t.Logf("total: %.5f", total)
+	}
+	// expect
+	var (
+		r   = r1 / r2 // ratio
+		F11 = 0.0
+		F12 = 1.0
+		F21 = r
+		F22 = 1.0 - r
+	)
+	if len(vfs) == 4 {
+		{
+			// compare F11 == 0
+			actF11 := vfs[0][0] + vfs[0][1] + vfs[1][0] + vfs[1][1]
+			if diff := math.Abs(actF11); 1e-2 < diff {
+				t.Errorf("F11: {%.5f, %.5f} diff = %.5f", actF11, F11, diff)
+			}
+		}
+		{
+			// compare F12
+			actF12 := vfs[0][2] + vfs[0][3] + vfs[1][2] + vfs[1][3]
+			if diff := math.Abs((actF12 - F12) / F12); 1e-2 < diff {
+				t.Errorf("F12: {%.5f, %.5f} diff = %.5f", actF12, F12, diff)
+			}
+		}
+		{
+			// compare F21
+			actF21 := vfs[2][0] + vfs[2][1] + vfs[3][0] + vfs[3][1]
+			if diff := math.Abs((actF21 - F21) / F21); 1e-2 < diff {
+				t.Errorf("F21: {%.5f, %.5f} diff = %.5f", actF21, F21, diff)
+			}
+		}
+		{
+			// compare F22
+			actF22 := vfs[2][2] + vfs[3][3]
+			if diff := math.Abs((actF22 - F22) / F22); 1e-2 < diff {
+				t.Errorf("F22: {%.5f, %.5f} diff = %.5f", actF22, F22, diff)
+			}
+		}
+	}
+	record()
 }

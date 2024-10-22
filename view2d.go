@@ -57,7 +57,10 @@ func (l Line) GetVector(rand float64) (r Ray) {
 	xc, yc := r.p1.X, r.p1.Y
 	res := gog.Rotate(xc, yc, math.Pi/2.0, r.p2)
 	r.p2 = res
-	// avoid scaling to lenght of vector to 1.0 and it is ok
+	// change vector size to 1.0
+	dist := gog.Distance(r.p1, r.p2)
+	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*dist/1.0
+	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*dist/1.0
 	return
 }
 
@@ -71,11 +74,50 @@ func (l Line) Box() (begin, finish gog.Point) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// var _ Curve = new(Arc)
-//
-// type Arc struct {
-// 	p1, p2, p3 gog.Point
-// }
+var _ Curve = new(Arc)
+
+type Arc struct {
+	p1, p2, p3 gog.Point
+}
+
+func (a Arc) GetVector(rand float64) (r Ray) {
+	// find random point on arc
+	isClock := gog.Orientation(a.p1, a.p2, a.p3) == gog.ClockwisePoints
+	xc, yc, radius := gog.Arc(a.p1, a.p2, a.p3)
+	a1 := math.Atan2(a.p1.Y-yc, a.p1.X-xc) // begin angle
+	a3 := math.Atan2(a.p3.Y-yc, a.p3.X-xc) // end angle
+	if isClock {
+		a1, a3 = a3, a1 // angle by clock
+	}
+	var fullAngle float64
+	if a1 < a3 {
+		fullAngle = a3 - a1
+	} else {
+		fullAngle = 2*math.Pi - (a1 - a3)
+	}
+	angle := fullAngle * rand // random angle
+	// create vector
+	r.p1.X = xc + radius*math.Cos(a1+angle)
+	r.p1.Y = yc + radius*math.Sin(a1+angle)
+	r.p2.X, r.p2.Y = xc, yc // end of ray at the center
+	// change vector size to 1.0
+	dist := gog.Distance(r.p1, r.p2)
+	if !isClock {
+		dist = -dist
+	}
+	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*dist/1.0
+	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*dist/1.0
+	return
+}
+
+func (a Arc) Box() (begin, finish gog.Point) {
+	xc, yc, r := gog.Arc(a.p1, a.p2, a.p3)
+	begin.X = min(xc-r, xc+r)
+	begin.Y = min(yc-r, yc+r)
+	finish.X = max(xc-r, xc+r)
+	finish.Y = max(yc-r, yc+r)
+	return
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -87,11 +129,31 @@ var (
 	miss     []Line
 )
 
-func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
-	if debug {
-		intersec = []Line{}
-		miss = []Line{}
+func intersect(c Curve, v Ray) (pi []gog.Point) {
+	switch c := c.(type) {
+	case Line:
+		pi, _, _ = gog.LineLine(
+			v.p1, v.p2,
+			c.p1, c.p2,
+		)
+	case Arc:
+		pi, _, _ = gog.LineArc(
+			v.p1, v.p2,
+			c.p1, c.p2, c.p3,
+		)
+	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint0Segment) {
+	// 	pi = append(pi, c.p1)
+	// }
+	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint1Segment) {
+	// 	pi = append(pi, c.p3)
+	// }
+	default:
+		panic(fmt.Errorf("not implemented: %#v", c))
 	}
+	return
+}
+
+func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 	vf := make([]int64, len(curves))
 	// calculate scale of geometry
 	scale := 0.0
@@ -107,12 +169,11 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		scale = math.Sqrt(pow.E2(begin.X-finish.X) + pow.E2(begin.Y-finish.Y))
 		// for garantee large of all point system, them multiply
 		// by coefficient more 1.0
-		scale *= 2.1
+		scale *= 1.1
 	}
 	// calculation
 	var mut sync.Mutex
-	counter := int64(0)
-	run := func(steps int64) {
+	run := func(cpu int, steps int64) {
 		for iter := int64(0); iter < steps; iter++ {
 			v := present.GetVector(rand.Float64())
 			// scale vector
@@ -123,35 +184,28 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 			// present curve to all
 			// and store minimal distance
 			index := -1
+			var pint gog.Point // interssection point
 			distance := math.MaxFloat64
 			for i := range curves {
-				switch c := curves[i].(type) {
-				case Line:
-					pi, _, _ := gog.LineLine(
-						v.p1, v.p2,
-						c.p1, c.p2,
-					)
-					if len(pi) == 0 {
-						if debug {
-							miss = append(miss, Line{v.p1, v.p2})
-						}
-						continue
-					}
-					d := gog.Distance(v.p1, pi[0])
-					if 1e-6 < math.Abs(d) && d < distance {
-						index = i
+				pis := intersect(curves[i], v)
+				for p := range pis {
+					if d := gog.Distance(v.p1, pis[p]); 1e-6 < math.Abs(d) && d < distance {
+						pint = pis[p]
 						distance = d
-						if debug {
-							intersec = append(intersec, Line{v.p1, pi[0]})
-						}
+						index = i
 					}
-				default:
-					panic(fmt.Errorf("not implemented: %#v", v))
 				}
+			}
+			if index < 0 {
+				if debug {
+					miss = append(miss, Line{v.p1, v.p2})
+				}
+				continue
+			} else if debug {
+				intersec = append(intersec, Line{v.p1, pint})
 			}
 			// get first intersection
 			mut.Lock()
-			counter++
 			if 0 <= index {
 				vf[index]++
 			}
@@ -169,23 +223,20 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		for i := 0; i < cpus; i++ {
 			if i != cpus-1 {
 				amount -= dstep
-				go func() {
-					run(dstep)
+				go func(cpu int) {
+					run(cpu, dstep)
 					wg.Done()
-				}()
+				}(i)
 			} else {
-				go func() {
-					run(amount)
+				go func(cpu int) {
+					run(cpu, amount)
 					wg.Done()
-				}()
+				}(i)
 			}
 		}
 		wg.Wait()
 	} else {
-		run(Amount)
-	}
-	if counter != Amount {
-		panic("not valid amount counter")
+		run(0, Amount)
 	}
 
 	viewFactor = make([]float64, len(curves))
