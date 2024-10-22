@@ -12,12 +12,12 @@ import (
 )
 
 type Ray struct {
-	start, finish gog.Point
+	Line
 }
 
 func (r *Ray) Scale(scale float64) {
-	r.finish.X = r.start.X + (r.finish.X-r.start.X)*scale
-	r.finish.Y = r.start.Y + (r.finish.Y-r.start.Y)*scale
+	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*scale
+	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*scale
 }
 
 // rand value from 0...1
@@ -27,13 +27,17 @@ func (r *Ray) Rotate(randomValue float64) {
 	}
 	// rotate at random angle from -pi/2 ... +pi/2
 	angle := math.Asin(1 - 2*randomValue)
-	r.finish = gog.Rotate(r.start.X, r.start.Y, angle, r.finish)
+	r.p2 = gog.Rotate(r.p1.X, r.p1.Y, angle, r.p2)
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 type Curve interface {
 	GetVector(rand float64) (r Ray)
 	Box() (begin, finish gog.Point)
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 var _ Curve = new(Line)
 
@@ -45,14 +49,14 @@ func (l Line) GetVector(rand float64) (r Ray) {
 	if rand < 0 || 1 < rand {
 		panic(fmt.Errorf("not valid random value: %.5f", rand))
 	}
-	r.start.X = l.p1.X + (l.p2.X-l.p1.X)*rand
-	r.start.Y = l.p1.Y + (l.p2.Y-l.p1.Y)*rand
-	r.finish.X = r.start.X + (l.p2.X - l.p1.X)
-	r.finish.Y = r.start.Y + (l.p2.Y - l.p1.Y)
+	r.p1.X = l.p1.X + (l.p2.X-l.p1.X)*rand
+	r.p1.Y = l.p1.Y + (l.p2.Y-l.p1.Y)*rand
+	r.p2.X = r.p1.X + (l.p2.X - l.p1.X)
+	r.p2.Y = r.p1.Y + (l.p2.Y - l.p1.Y)
 	// rotate at 90 degree
-	xc, yc := r.start.X, r.start.Y
-	res := gog.Rotate(xc, yc, math.Pi/2.0, r.finish)
-	r.finish = res
+	xc, yc := r.p1.X, r.p1.Y
+	res := gog.Rotate(xc, yc, math.Pi/2.0, r.p2)
+	r.p2 = res
 	// avoid scaling to lenght of vector to 1.0 and it is ok
 	return
 }
@@ -64,6 +68,16 @@ func (l Line) Box() (begin, finish gog.Point) {
 	finish.Y = max(l.p1.Y, l.p2.Y)
 	return
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+// var _ Curve = new(Arc)
+//
+// type Arc struct {
+// 	p1, p2, p3 gog.Point
+// }
+
+///////////////////////////////////////////////////////////////////////////////
 
 var Amount int64 = 100000
 
@@ -114,21 +128,21 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 				switch c := curves[i].(type) {
 				case Line:
 					pi, _, _ := gog.LineLine(
-						v.start, v.finish,
+						v.p1, v.p2,
 						c.p1, c.p2,
 					)
 					if len(pi) == 0 {
 						if debug {
-							miss = append(miss, Line{v.start, v.finish})
+							miss = append(miss, Line{v.p1, v.p2})
 						}
 						continue
 					}
-					d := gog.Distance(v.start, pi[0])
+					d := gog.Distance(v.p1, pi[0])
 					if 1e-6 < math.Abs(d) && d < distance {
 						index = i
 						distance = d
 						if debug {
-							intersec = append(intersec, Line{v.start, pi[0]})
+							intersec = append(intersec, Line{v.p1, pi[0]})
 						}
 					}
 				default:
