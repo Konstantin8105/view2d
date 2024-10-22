@@ -121,6 +121,43 @@ func (a Arc) Box() (begin, finish gog.Point) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+var _ Curve = new(Circle)
+
+type Circle struct {
+	Center        gog.Point
+	Radius        float64
+	VectorOutside bool
+}
+
+func (c Circle) GetVector(rand float64) (r Ray) {
+	// generate angle
+	angle := 2 * math.Pi * rand
+	// create vector
+	xc, yc, radius := c.Center.X, c.Center.Y, c.Radius
+	r.P1.X = xc + radius*math.Cos(angle)
+	r.P1.Y = yc + radius*math.Sin(angle)
+	r.P2.X, r.P2.Y = xc, yc // end of ray at the center
+	// change vector size to 1.0
+	dist := gog.Distance(r.P1, r.P2)
+	if c.VectorOutside {
+		dist = -dist
+	}
+	r.P2.X = r.P1.X + (r.P2.X-r.P1.X)*dist/1.0
+	r.P2.Y = r.P1.Y + (r.P2.Y-r.P1.Y)*dist/1.0
+	return
+}
+
+func (c Circle) Box() (begin, finish gog.Point) {
+	xc, yc, r := c.Center.X, c.Center.Y, c.Radius
+	begin.X = min(xc-r, xc+r)
+	begin.Y = min(yc-r, yc+r)
+	finish.X = max(xc-r, xc+r)
+	finish.Y = max(yc-r, yc+r)
+	return
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 var Amount int64 = 100000
 
 var (
@@ -141,6 +178,22 @@ func intersect(c Curve, v Ray) (pi []gog.Point) {
 			v.P1, v.P2,
 			c.P1, c.P2, c.P3,
 		)
+	case Circle:
+		arc1 := Arc{
+			P1: gog.Point{X: c.Center.X + c.Radius, Y: c.Center.Y},
+			P2: gog.Point{X: c.Center.X, Y: c.Center.Y + c.Radius},
+			P3: gog.Point{X: c.Center.X - c.Radius, Y: c.Center.Y},
+		}
+		arc2 := Arc{
+			P1: gog.Point{X: c.Center.X - c.Radius, Y: c.Center.Y},
+			P2: gog.Point{X: c.Center.X, Y: c.Center.Y - c.Radius},
+			P3: gog.Point{X: c.Center.X + c.Radius, Y: c.Center.Y},
+		}
+		if c.VectorOutside {
+			arc1.P1, arc1.P3 = arc1.P3, arc1.P1
+			arc2.P1, arc2.P3 = arc2.P3, arc2.P1
+		}
+		pi = append(intersect(arc1, v), intersect(arc2, v)...)
 	default:
 		panic(fmt.Errorf("not implemented: %#v", c))
 	}

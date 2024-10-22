@@ -249,3 +249,85 @@ func TestArc(t *testing.T) {
 		t.Errorf("F12: {%.5f, %.5f} diff = %.5f", actF12, F12, diff)
 	}
 }
+
+func TestConcentricCylinder(t *testing.T) {
+	{
+		old := Amount
+		size := int64(100000)
+		if size < Amount {
+			Amount = size
+		}
+		defer func() {
+			Amount = old
+		}()
+	}
+	{
+		old := debug
+		debug = true
+		defer func() {
+			debug = old
+		}()
+	}
+	var (
+		r1 = 1.0
+		r2 = 3.0
+	)
+	var (
+		c1 = Circle{
+			Radius:        r1,
+			VectorOutside: true,
+		}
+		c2 = Circle{
+			Radius: r2,
+		}
+
+		cs = []Curve{c1, c2}
+	)
+	var vfs [][]float64
+	for i := range cs {
+		vf := OneCurve(cs[i], cs)
+		vfs = append(vfs, vf)
+		t.Logf("view factors: %.5f", vf)
+		total := 0.0
+		for i := range vf {
+			total += vf[i]
+		}
+		t.Logf("total: %.5f", total)
+	}
+	// expect
+	var (
+		r   = r1 / r2 // ratio
+		F11 = 0.0
+		F12 = 1.0
+		F21 = r
+		F22 = 1.0 - r
+	)
+	{
+		// compare F12
+		actF11 := vfs[0][0]
+		if diff := math.Abs((actF11 - F11) ); 1e-2 < diff {
+			t.Errorf("F11: {%.5f, %.5f} diff = %.5f", actF11, F11, diff)
+		}
+	}
+	{
+		// compare F12
+		actF12 := vfs[0][1]
+		if diff := math.Abs((actF12 - F12) / F12); 1e-2 < diff {
+			t.Errorf("F12: {%.5f, %.5f} diff = %.5f", actF12, F12, diff)
+		}
+	}
+	{
+		// compare F21
+		actF21 := vfs[1][0]
+		if diff := math.Abs((actF21 - F21) / F21); 1e-2 < diff {
+			t.Errorf("F21: {%.5f, %.5f} diff = %.5f", actF21, F21, diff)
+		}
+	}
+	{
+		// compare F22
+		actF22 := vfs[1][1]
+		if diff := math.Abs((actF22 - F22) / F22); 1e-2 < diff {
+			t.Errorf("F22: {%.5f, %.5f} diff = %.5f", actF22, F22, diff)
+		}
+	}
+}
