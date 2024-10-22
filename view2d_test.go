@@ -18,12 +18,12 @@ func a(angle float64) (F12, f float64) {
 		w      = 1.0
 	)
 	l1 := Line{
-		p1: gog.Point{X: 0, Y: 0},
-		p2: gog.Point{X: w, Y: 0},
+		P1: gog.Point{X: 0, Y: 0},
+		P2: gog.Point{X: w, Y: 0},
 	}
 	l2 := Line{
-		p1: gog.Point{X: 0, Y: 0},
-		p2: gog.Point{X: w * math.Cos(angleR), Y: w * math.Sin(angleR)},
+		P1: gog.Point{X: 0, Y: 0},
+		P2: gog.Point{X: w * math.Cos(angleR), Y: w * math.Sin(angleR)},
 	}
 	vf := OneCurve(l1, []Curve{l1, l2})
 	// expect: F12 = 1 - sin(1/2*angle)
@@ -39,9 +39,9 @@ type arr struct {
 func (a arr) Len() int { return 2 }
 func (a arr) XY(i int) (x, y float64) {
 	if i == 0 {
-		return a.l.p1.X, a.l.p1.Y
+		return a.l.P1.X, a.l.P1.Y
 	}
-	return a.l.p2.X, a.l.p2.Y
+	return a.l.P2.X, a.l.P2.Y
 }
 
 func record() {

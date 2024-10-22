@@ -16,8 +16,8 @@ type Ray struct {
 }
 
 func (r *Ray) Scale(scale float64) {
-	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*scale
-	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*scale
+	r.P2.X = r.P1.X + (r.P2.X-r.P1.X)*scale
+	r.P2.Y = r.P1.Y + (r.P2.Y-r.P1.Y)*scale
 }
 
 // rand value from 0...1
@@ -27,7 +27,7 @@ func (r *Ray) Rotate(randomValue float64) {
 	}
 	// rotate at random angle from -pi/2 ... +pi/2
 	angle := math.Asin(1 - 2*randomValue)
-	r.p2 = gog.Rotate(r.p1.X, r.p1.Y, angle, r.p2)
+	r.P2 = gog.Rotate(r.P1.X, r.P1.Y, angle, r.P2)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,33 +42,33 @@ type Curve interface {
 var _ Curve = new(Line)
 
 type Line struct {
-	p1, p2 gog.Point
+	P1, P2 gog.Point
 }
 
 func (l Line) GetVector(rand float64) (r Ray) {
 	if rand < 0 || 1 < rand {
 		panic(fmt.Errorf("not valid random value: %.5f", rand))
 	}
-	r.p1.X = l.p1.X + (l.p2.X-l.p1.X)*rand
-	r.p1.Y = l.p1.Y + (l.p2.Y-l.p1.Y)*rand
-	r.p2.X = r.p1.X + (l.p2.X - l.p1.X)
-	r.p2.Y = r.p1.Y + (l.p2.Y - l.p1.Y)
+	r.P1.X = l.P1.X + (l.P2.X-l.P1.X)*rand
+	r.P1.Y = l.P1.Y + (l.P2.Y-l.P1.Y)*rand
+	r.P2.X = r.P1.X + (l.P2.X - l.P1.X)
+	r.P2.Y = r.P1.Y + (l.P2.Y - l.P1.Y)
 	// rotate at 90 degree
-	xc, yc := r.p1.X, r.p1.Y
-	res := gog.Rotate(xc, yc, math.Pi/2.0, r.p2)
-	r.p2 = res
+	xc, yc := r.P1.X, r.P1.Y
+	res := gog.Rotate(xc, yc, math.Pi/2.0, r.P2)
+	r.P2 = res
 	// change vector size to 1.0
-	dist := gog.Distance(r.p1, r.p2)
-	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*dist/1.0
-	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*dist/1.0
+	dist := gog.Distance(r.P1, r.P2)
+	r.P2.X = r.P1.X + (r.P2.X-r.P1.X)*dist/1.0
+	r.P2.Y = r.P1.Y + (r.P2.Y-r.P1.Y)*dist/1.0
 	return
 }
 
 func (l Line) Box() (begin, finish gog.Point) {
-	begin.X = min(l.p1.X, l.p2.X)
-	begin.Y = min(l.p1.Y, l.p2.Y)
-	finish.X = max(l.p1.X, l.p2.X)
-	finish.Y = max(l.p1.Y, l.p2.Y)
+	begin.X = min(l.P1.X, l.P2.X)
+	begin.Y = min(l.P1.Y, l.P2.Y)
+	finish.X = max(l.P1.X, l.P2.X)
+	finish.Y = max(l.P1.Y, l.P2.Y)
 	return
 }
 
@@ -77,15 +77,15 @@ func (l Line) Box() (begin, finish gog.Point) {
 var _ Curve = new(Arc)
 
 type Arc struct {
-	p1, p2, p3 gog.Point
+	P1, P2, P3 gog.Point
 }
 
 func (a Arc) GetVector(rand float64) (r Ray) {
 	// find random point on arc
-	isClock := gog.Orientation(a.p1, a.p2, a.p3) == gog.ClockwisePoints
-	xc, yc, radius := gog.Arc(a.p1, a.p2, a.p3)
-	a1 := math.Atan2(a.p1.Y-yc, a.p1.X-xc) // begin angle
-	a3 := math.Atan2(a.p3.Y-yc, a.p3.X-xc) // end angle
+	isClock := gog.Orientation(a.P1, a.P2, a.P3) == gog.ClockwisePoints
+	xc, yc, radius := gog.Arc(a.P1, a.P2, a.P3)
+	a1 := math.Atan2(a.P1.Y-yc, a.P1.X-xc) // begin angle
+	a3 := math.Atan2(a.P3.Y-yc, a.P3.X-xc) // end angle
 	if isClock {
 		a1, a3 = a3, a1 // angle by clock
 	}
@@ -97,21 +97,21 @@ func (a Arc) GetVector(rand float64) (r Ray) {
 	}
 	angle := fullAngle * rand // random angle
 	// create vector
-	r.p1.X = xc + radius*math.Cos(a1+angle)
-	r.p1.Y = yc + radius*math.Sin(a1+angle)
-	r.p2.X, r.p2.Y = xc, yc // end of ray at the center
+	r.P1.X = xc + radius*math.Cos(a1+angle)
+	r.P1.Y = yc + radius*math.Sin(a1+angle)
+	r.P2.X, r.P2.Y = xc, yc // end of ray at the center
 	// change vector size to 1.0
-	dist := gog.Distance(r.p1, r.p2)
+	dist := gog.Distance(r.P1, r.P2)
 	if !isClock {
 		dist = -dist
 	}
-	r.p2.X = r.p1.X + (r.p2.X-r.p1.X)*dist/1.0
-	r.p2.Y = r.p1.Y + (r.p2.Y-r.p1.Y)*dist/1.0
+	r.P2.X = r.P1.X + (r.P2.X-r.P1.X)*dist/1.0
+	r.P2.Y = r.P1.Y + (r.P2.Y-r.P1.Y)*dist/1.0
 	return
 }
 
 func (a Arc) Box() (begin, finish gog.Point) {
-	xc, yc, r := gog.Arc(a.p1, a.p2, a.p3)
+	xc, yc, r := gog.Arc(a.P1, a.P2, a.P3)
 	begin.X = min(xc-r, xc+r)
 	begin.Y = min(yc-r, yc+r)
 	finish.X = max(xc-r, xc+r)
@@ -133,19 +133,19 @@ func intersect(c Curve, v Ray) (pi []gog.Point) {
 	switch c := c.(type) {
 	case Line:
 		pi, _, _ = gog.LineLine(
-			v.p1, v.p2,
-			c.p1, c.p2,
+			v.P1, v.P2,
+			c.P1, c.P2,
 		)
 	case Arc:
 		pi, _, _ = gog.LineArc(
-			v.p1, v.p2,
-			c.p1, c.p2, c.p3,
+			v.P1, v.P2,
+			c.P1, c.P2, c.P3,
 		)
 	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint0Segment) {
-	// 	pi = append(pi, c.p1)
+	// 	pi = append(pi, c.P1)
 	// }
 	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint1Segment) {
-	// 	pi = append(pi, c.p3)
+	// 	pi = append(pi, c.P3)
 	// }
 	default:
 		panic(fmt.Errorf("not implemented: %#v", c))
@@ -189,7 +189,7 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 			for i := range curves {
 				pis := intersect(curves[i], v)
 				for p := range pis {
-					if d := gog.Distance(v.p1, pis[p]); 1e-6 < math.Abs(d) && d < distance {
+					if d := gog.Distance(v.P1, pis[p]); 1e-6 < math.Abs(d) && d < distance {
 						pint = pis[p]
 						distance = d
 						index = i
@@ -198,11 +198,11 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 			}
 			if index < 0 {
 				if debug {
-					miss = append(miss, Line{v.p1, v.p2})
+					miss = append(miss, Line{v.P1, v.P2})
 				}
 				continue
 			} else if debug {
-				intersec = append(intersec, Line{v.p1, pint})
+				intersec = append(intersec, Line{v.P1, pint})
 			}
 			// get first intersection
 			mut.Lock()
