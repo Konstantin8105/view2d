@@ -341,7 +341,6 @@ func TestSingleRow(t *testing.T) {
 	for S := 2.5; S <= 5.1; S += 0.5 {
 		var (
 			D = 1.0
-			S = 3.0
 		)
 		var (
 			c1 = Circle{
@@ -374,6 +373,7 @@ func TestSingleRow(t *testing.T) {
 			if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
 				t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
 			}
+			t.Logf("Fij = %.5f", Fij)
 		}
 	}
 }
