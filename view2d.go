@@ -141,12 +141,6 @@ func intersect(c Curve, v Ray) (pi []gog.Point) {
 			v.P1, v.P2,
 			c.P1, c.P2, c.P3,
 		)
-	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint0Segment) {
-	// 	pi = append(pi, c.P1)
-	// }
-	// if len(pi) == 0 && stA.Has(gog.OnSegment) && stB.Has(gog.OnPoint1Segment) {
-	// 	pi = append(pi, c.P3)
-	// }
 	default:
 		panic(fmt.Errorf("not implemented: %#v", c))
 	}
