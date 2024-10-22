@@ -113,15 +113,10 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 			for i := range curves {
 				switch c := curves[i].(type) {
 				case Line:
-					// TODO : if gog.Orientation(c.p1, c.p2, v.start) != gog.ClockwisePoints {
-					// TODO : 	continue
-					// TODO : }
-					pi, stA, stB := gog.LineLine(
+					pi, _, _ := gog.LineLine(
 						v.start, v.finish,
 						c.p1, c.p2,
 					)
-					_ = stA
-					_ = stB
 					if len(pi) == 0 {
 						if debug {
 							miss = append(miss, Line{v.start, v.finish})

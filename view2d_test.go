@@ -88,7 +88,7 @@ func TestRecorder(t *testing.T) {
 			panic(err)
 		}
 		// Save the plot to a PNG file.
-		if err := p.Save(4*vg.Inch, 4*vg.Inch, gr.name+".png"); err != nil {
+		if err := p.Save(8*vg.Inch, 8*vg.Inch, gr.name+".png"); err != nil {
 			panic(err)
 		}
 	}
