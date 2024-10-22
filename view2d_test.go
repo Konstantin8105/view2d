@@ -1,6 +1,7 @@
 package view2d
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -339,42 +340,44 @@ func TestSingleRow(t *testing.T) {
 		}()
 	}
 	for S := 2.5; S <= 5.1; S += 0.5 {
-		var (
-			D = 1.0
-		)
-		var (
-			c1 = Circle{
-				Radius:        D / 2.0,
-				VectorOutside: true,
+		t.Run(fmt.Sprintf("%.2f", S), func(t *testing.T) {
+			var (
+				D = 1.0
+			)
+			var (
+				c1 = Circle{
+					Radius:        D / 2.0,
+					VectorOutside: true,
+				}
+
+				c2 = Circle{Center: gog.Point{+1 * S, 0}, Radius: D / 2.0, VectorOutside: true}
+
+				p3 = gog.Point{X: S, Y: D/2 + 0.00001}
+				p4 = gog.Point{X: 0, Y: D/2 + 0.00001}
+				l2 = Line{p3, p4}
+
+				cs = []Curve{c2, c1, l2}
+			)
+			vf := OneCurve(l2, cs)
+			t.Logf("view factors: %.5f", vf)
+			total := 0.0
+			for i := range vf {
+				total += vf[i]
 			}
-
-			c2 = Circle{Center: gog.Point{+1 * S, 0}, Radius: D / 2.0, VectorOutside: true}
-
-			p3 = gog.Point{X: S, Y: D/2 + 0.00001}
-			p4 = gog.Point{X: 0, Y: D/2 + 0.00001}
-			l2 = Line{p3, p4}
-
-			cs = []Curve{c2, c1, l2}
-		)
-		vf := OneCurve(l2, cs)
-		t.Logf("view factors: %.5f", vf)
-		total := 0.0
-		for i := range vf {
-			total += vf[i]
-		}
-		t.Logf("total: %.5f", total)
-		// expect
-		var (
-			Fij = 1.0 - math.Sqrt(1-pow.E2(D/S)) + (D/S)*math.Atan(math.Sqrt(pow.E2(S/D)-1.0))
-		)
-		{
-			// compare Fij
-			// Это view factor - сколько оседает на трубах
-			actFij := vf[0] + vf[1] // view factor on tube
-			if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
-				t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
+			t.Logf("total: %.5f", total)
+			// expect
+			var (
+				Fij = 1.0 - math.Sqrt(1-pow.E2(D/S)) + (D/S)*math.Atan(math.Sqrt(pow.E2(S/D)-1.0))
+			)
+			{
+				// compare Fij
+				// Это view factor - сколько оседает на трубах
+				actFij := vf[0] + vf[1] // view factor on tube
+				if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
+					t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
+				}
+				t.Logf("Fij = %.5f", Fij)
 			}
-			t.Logf("Fij = %.5f", Fij)
-		}
+		})
 	}
 }
