@@ -356,7 +356,7 @@ func TestSingleRow(t *testing.T) {
 				p4 = gog.Point{X: 0, Y: D/2 + 0.00001}
 				l2 = Line{p3, p4}
 
-				cs = []Curve{c2, c1, l2}
+				cs = []Curve{l2, c2, c1}
 			)
 			vf := OneCurve(l2, cs)
 			t.Logf("view factors: %.5f", vf)
@@ -372,7 +372,7 @@ func TestSingleRow(t *testing.T) {
 			{
 				// compare Fij
 				// Это view factor - сколько оседает на трубах
-				actFij := vf[0] + vf[1] // view factor on tube
+				actFij := vf[1] + vf[2] // view factor on tube
 				if diff := math.Abs((actFij - Fij) / Fij); 1e-2 < diff {
 					t.Errorf("Fij: {%.5f, %.5f} diff = %.5f", actFij, Fij, diff)
 				}
