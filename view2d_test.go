@@ -381,3 +381,50 @@ func TestSingleRow(t *testing.T) {
 		})
 	}
 }
+
+func TestHeater(t *testing.T) {
+	// модель является одним рядом печи парвого риформинга
+	// предположение было что установив отражатель или
+	// изменить поверхность кирпичной туннели может
+	// привести к изменению распределения радиационных
+	// теплообмен.
+	// По результату - никакого изменения не произошло.
+	{
+		old := Amount
+		defer func() {
+			Amount = old
+		}()
+		Amount *= 10
+	}
+	for _, h := range []float64{0, 0.5, 1.3, 5} {
+		var (
+			p0 = gog.Point{X: 0.0, Y: 0.00}
+			p1 = gog.Point{X: 2.6, Y: 0.00}
+			p2 = gog.Point{X: 2.6, Y: 6.00}
+			p3 = gog.Point{X: 2.6, Y: 12.0}
+			p4 = gog.Point{X: 1.3, Y: 12.0 - h}
+			p5 = gog.Point{X: 0.0, Y: 12.0}
+			p6 = gog.Point{X: 0.0, Y: 6.00}
+
+			l0 = Line{p0, p1}
+			l1 = Line{p1, p2}
+			l2 = Line{p2, p3}
+			l3 = Line{p3, p4}
+			l4 = Line{p4, p5}
+			l5 = Line{p5, p6}
+			l6 = Line{p6, p0}
+			cs = []Curve{l0, l1, l2, l3, l4, l5, l6}
+		)
+		for i, l := range []Line{l0} {
+			vf := OneCurve(l, cs)
+			total := 0.0
+			for i := range vf {
+				total += vf[i]
+			}
+			if diff := math.Abs((total - 1) / 1.0); 1e-2 < diff {
+				t.Errorf("i = %d diff = %.5f", i, diff)
+			}
+			t.Logf("%.3f", vf)
+		}
+	}
+}
