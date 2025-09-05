@@ -155,38 +155,38 @@ func TestVerification(t *testing.T) {
 		}()
 	}
 	var (
-		p0  = gog.Point{0.00, 0.00}
-		p1  = gog.Point{0.35, 0.00}
+		p0  = gog.Point{X: 0.00, Y: 0.00}
+		p1  = gog.Point{X: 0.35, Y: 0.00}
 		A12 = Line{p0, p1}
 
-		p2  = gog.Point{0.8, 0.00}
+		p2  = gog.Point{X: 0.8, Y: 0.00}
 		A11 = Line{p1, p2}
 
-		p3  = gog.Point{1.00, 0.00}
+		p3  = gog.Point{X: 1.00, Y: 0.00}
 		A10 = Line{p2, p3}
 
-		p4 = gog.Point{1, 0.5}
+		p4 = gog.Point{X: 1, Y: 0.5}
 		A9 = Line{p3, p4}
 
-		p5 = gog.Point{0.6, 0.5}
+		p5 = gog.Point{X: 0.6, Y: 0.5}
 		A8 = Line{p4, p5}
 
-		p6 = gog.Point{1., 0.5001}
+		p6 = gog.Point{X: 1., Y: 0.5001}
 		A7 = Line{p5, p6}
 
-		p7 = gog.Point{1, 1}
+		p7 = gog.Point{X: 1, Y: 1}
 		A6 = Line{p6, p7}
 
-		p8 = gog.Point{0, 1}
+		p8 = gog.Point{X: 0, Y: 1}
 		A5 = Line{p7, p8}
 
-		p9 = gog.Point{0, 0.5001}
+		p9 = gog.Point{X: 0, Y: 0.5001}
 		A4 = Line{p8, p9}
 
-		p10 = gog.Point{0.4, 0.5}
+		p10 = gog.Point{X: 0.4, Y: 0.5}
 		A2  = Line{p9, p10}
 
-		p11 = gog.Point{0, 0.5}
+		p11 = gog.Point{X: 0, Y: 0.5}
 		A3  = Line{p10, p11}
 
 		A1 = Line{p11, p0}
@@ -218,14 +218,14 @@ func TestArc(t *testing.T) {
 		r2 = 3.0
 	)
 	var (
-		p10 = gog.Point{+r1, 0.0}
-		p11 = gog.Point{0.0, +r1}
-		p12 = gog.Point{-r1, 0.0}
+		p10 = gog.Point{X: +r1, Y: 0.0}
+		p11 = gog.Point{X: 0.0, Y: +r1}
+		p12 = gog.Point{X: -r1, Y: 0.0}
 		a11 = Arc{p10, p11, p12}
 
-		p20 = gog.Point{-r2, 0.0}
-		p21 = gog.Point{0.0, +r2}
-		p22 = gog.Point{+r2, 0.0}
+		p20 = gog.Point{X: -r2, Y: 0.0}
+		p21 = gog.Point{X: 0.0, Y: +r2}
+		p22 = gog.Point{X: +r2, Y: 0.0}
 		a21 = Arc{p20, p21, p22}
 
 		cs = []Curve{a11, a21}
@@ -350,7 +350,7 @@ func TestSingleRow(t *testing.T) {
 					VectorOutside: true,
 				}
 
-				c2 = Circle{Center: gog.Point{+1 * S, 0}, Radius: D / 2.0, VectorOutside: true}
+				c2 = Circle{Center: gog.Point{X: +1 * S, Y: 0}, Radius: D / 2.0, VectorOutside: true}
 
 				p3 = gog.Point{X: S, Y: D/2 + 0.00001}
 				p4 = gog.Point{X: 0, Y: D/2 + 0.00001}

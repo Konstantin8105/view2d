@@ -220,8 +220,8 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 	}
 	// calculation
 	var mut sync.Mutex
-	run := func(cpu int, steps int64) {
-		for iter := int64(0); iter < steps; iter++ {
+	run := func(steps int64) {
+		for range steps {
 			v := present.GetVector(rand.Float64())
 			// scale vector
 			v.Scale(scale)
@@ -267,23 +267,23 @@ func OneCurve(present Curve, curves []Curve) (viewFactor []float64) {
 		wg.Add(cpus)
 		amount := Amount
 		dstep := Amount / int64(cpus)
-		for i := 0; i < cpus; i++ {
+		for i := range cpus {
 			if i != cpus-1 {
 				amount -= dstep
-				go func(cpu int) {
-					run(cpu, dstep)
+				go func() {
+					run(dstep)
 					wg.Done()
-				}(i)
+				}()
 			} else {
-				go func(cpu int) {
-					run(cpu, amount)
+				go func() {
+					run(amount)
 					wg.Done()
-				}(i)
+				}()
 			}
 		}
 		wg.Wait()
 	} else {
-		run(0, Amount)
+		run(Amount)
 	}
 
 	viewFactor = make([]float64, len(curves))
